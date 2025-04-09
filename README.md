@@ -78,7 +78,7 @@ The server provides the following tools for AI assistants:
 
 ### Building
 ```bash
-deno compile --allow-net --allow-env --allow-read src/main.ts
+deno compile --allow-env --allow-read --allow-net --env-file=.env  src/main.ts
 ```
 
 ### MCP Config

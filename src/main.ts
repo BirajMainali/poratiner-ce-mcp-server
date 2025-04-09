@@ -4,27 +4,25 @@ import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import {
   CallToolRequestSchema,
-  ListResourcesRequestSchema,
   ListToolsRequestSchema,
-  ReadResourceRequestSchema,
 } from "@modelcontextprotocol/sdk/types.js";
-import { TOOL } from "./constants/index.ts";
+import { Tools } from "./constants/index.ts";
+
 
 import {
   createDockerContainer,
   deleteDockerContainer,
   deleteImageBuildCache,
-  deleteStoppedContainers,
   deleteUnusedImages,
   fetchContainerLogs,
   fetchDockerContainers,
   fetchImages,
   fetchNetworks,
-  fetchServiceLog,
   fetchServices,
-  inspectNetwork,
+  pruneContainer,
   startDockerContainer,
   updateContainerResourceLimits,
+  fetchServiceLog,
 } from "./api/portainer.ts";
 
 const server = new Server(
@@ -44,30 +42,20 @@ server.setRequestHandler(ListToolsRequestSchema, () => {
   return {
     tools: [
       {
-        name: TOOL.FETCH_DOCKER_CONTAINERS,
-        description: "Fetch all Docker containers from a specified environment",
+        name: Tools.GetDockerContainers,
+        description: "Fetch all Docker containers",
         inputSchema: {
           type: "object",
-          properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment to fetch containers from",
-            },
-          },
-          required: ["envId"],
+          properties: {},
+          required: [],
         },
       },
       {
-        name: TOOL.CREATE_DOCKER_CONTAINER,
-        description: "Create a new Docker container in a specified environment",
+        name: Tools.CreateDockerContainer,
+        description: "Create a new Docker container",
         inputSchema: {
           type: "object",
           properties: {
-            envId: {
-              type: "string",
-              description:
-                "The ID of the environment to create the container in",
-            },
             containerName: {
               type: "string",
               description: "The name of the container to create",
@@ -85,37 +73,29 @@ server.setRequestHandler(ListToolsRequestSchema, () => {
               description: "Host configuration for the container",
             },
           },
-          required: ["envId", "containerName", "image"],
+          required: ["containerName", "image"],
         },
       },
       {
-        name: TOOL.START_DOCKER_CONTAINER,
-        description: "Start a Docker container in a specified environment",
+        name: Tools.StartDockerContainer,
+        description: "Start a Docker container",
         inputSchema: {
           type: "object",
           properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment containing the container",
-            },
             containerId: {
               type: "string",
               description: "The ID of the container to start",
             },
           },
-          required: ["envId", "containerId"],
+          required: ["containerId"],
         },
       },
       {
-        name: TOOL.DELETE_DOCKER_CONTAINER,
-        description: "Delete a Docker container from a specified environment",
+        name: Tools.DeleteDockerContainer,
+        description: "Delete a Docker container",
         inputSchema: {
           type: "object",
           properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment containing the container",
-            },
             containerId: {
               type: "string",
               description: "The ID of the container to delete",
@@ -125,19 +105,15 @@ server.setRequestHandler(ListToolsRequestSchema, () => {
               description: "Whether to force the deletion of the container",
             },
           },
-          required: ["envId", "containerId"],
+          required: ["containerId"],
         },
       },
       {
-        name: TOOL.FETCH_CONTAINER_LOGS,
+        name: Tools.GetContainerLogs,
         description: "Fetch logs from a Docker container",
         inputSchema: {
           type: "object",
           properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment containing the container",
-            },
             containerId: {
               type: "string",
               description: "The ID of the container to fetch logs from",
@@ -163,19 +139,15 @@ server.setRequestHandler(ListToolsRequestSchema, () => {
               description: "Number of lines to return from the end of the logs",
             },
           },
-          required: ["envId", "containerId"],
+          required: ["containerId"],
         },
       },
       {
-        name: TOOL.UPDATE_CONTAINER_RESOURCE_LIMITS,
+        name: Tools.UpdateContainer,
         description: "Update resource limits for a Docker container",
         inputSchema: {
           type: "object",
           properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment containing the container",
-            },
             containerId: {
               type: "string",
               description: "The ID of the container to update",
@@ -193,122 +165,69 @@ server.setRequestHandler(ListToolsRequestSchema, () => {
               description: "Restart policy for the container",
             },
           },
-          required: ["envId", "containerId"],
+          required: ["containerId"],
         },
       },
       {
-        name: TOOL.DELETE_STOPPED_CONTAINERS,
-        description:
-          "Delete all stopped containers from a specified environment",
+        name: Tools.DeleteUnwantedContainers,
+        description: "Delete all stopped containers",
         inputSchema: {
           type: "object",
-          properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment to clean up",
-            },
-          },
-          required: ["envId"],
+          properties: {},
+          required: [],
         },
       },
       {
-        name: TOOL.FETCH_IMAGES,
-        description: "Fetch all Docker images from a specified environment",
+        name: Tools.GetImages,
+        description: "Fetch all Docker images",
         inputSchema: {
           type: "object",
-          properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment to fetch images from",
-            },
-          },
-          required: ["envId"],
+          properties: {},
+          required: [],
         },
       },
       {
-        name: TOOL.DELETE_IMAGE_BUILD_CACHE,
+        name: Tools.DeleteImageBuilderCache,
         description: "Delete the build cache for Docker images",
         inputSchema: {
           type: "object",
-          properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment to clean up",
-            },
-          },
-          required: ["envId"],
+          properties: {},
+          required: [],
         },
       },
       {
-        name: TOOL.DELETE_UNUSED_IMAGES,
+        name: Tools.DeleteUnusedImages,
         description: "Delete unused Docker images",
         inputSchema: {
           type: "object",
-          properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment to clean up",
-            },
-          },
-          required: ["envId"],
+          properties: {},
+          required: [],
         },
       },
       {
-        name: TOOL.FETCH_NETWORKS,
-        description: "Fetch all Docker networks from a specified environment",
+        name: Tools.GetNetworks,
+        description: "Fetch all Docker networks",
         inputSchema: {
           type: "object",
-          properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment to fetch networks from",
-            },
-          },
-          required: ["envId"],
+          properties: {},
+          required: [],
         },
       },
       {
-        name: TOOL.INSPECT_NETWORK,
-        description: "Get detailed information about a specific Docker network",
+        name: Tools.GetServices,
+        description: "Fetch all Docker services",
         inputSchema: {
           type: "object",
-          properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment containing the network",
-            },
-            networkId: {
-              type: "string",
-              description: "The ID of the network to inspect",
-            },
-          },
-          required: ["envId", "networkId"],
+          properties: {},
+          required: [],
         },
       },
       {
-        name: TOOL.FETCH_SERVICES,
-        description: "Fetch all Docker services from a specified environment",
-        inputSchema: {
-          type: "object",
-          properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment to fetch services from",
-            },
-          },
-          required: ["envId"],
-        },
-      },
-      {
-        name: TOOL.FETCH_SERVICE_LOG,
+        name: Tools.GetServiceLogs,
         description: "Fetch logs from a Docker service",
         inputSchema: {
           type: "object",
           properties: {
-            envId: {
-              type: "string",
-              description: "The ID of the environment containing the service",
-            },
             serviceId: {
               type: "string",
               description: "The ID of the service to fetch logs from",
@@ -334,7 +253,7 @@ server.setRequestHandler(ListToolsRequestSchema, () => {
               description: "Number of lines to return from the end of the logs",
             },
           },
-          required: ["envId", "serviceId"],
+          required: ["serviceId"],
         },
       },
     ],
@@ -342,133 +261,231 @@ server.setRequestHandler(ListToolsRequestSchema, () => {
 });
 
 server.setRequestHandler(CallToolRequestSchema, async (request) => {
-  const { name, arguments: args } = request.params;
+  try {
+    const { name, arguments: args } = request.params;
 
-  if (!args) {
-    throw new Error(`No arguments provided for tool: ${name}`);
+    if (!args) {
+      throw new Error(`No arguments provided for tool: ${name}`);
+    }
+
+    // Type assertion for args to ensure proper typing
+    const typedArgs = args as Record<string, any>;
+
+    switch (name) {
+      case Tools.GetDockerContainers: {
+        const result = await fetchDockerContainers();
+        return {
+          content: [{
+            type: "text",
+            text: result.map((container: any) => {
+              return `ContainerId: ${container.Id}, Name: ${container.Names?.[0] || "unknown"}, Ports: ${container.Ports?.map(p => `${p.PublicPort}:${p.PrivatePort}/${p.Type}`).join(", ") || "none"}, State: ${container.State}, Status: ${container.Status}`;
+            }).join("\n"),
+          }],
+        };
+      }
+
+
+      case Tools.CreateDockerContainer: {
+        const result = await createDockerContainer(
+          typedArgs.containerName as string,
+          typedArgs.image as string,
+          typedArgs.exposedPorts as Record<string, unknown> || {},
+          typedArgs.hostConfig as Record<string, unknown> || {},
+        );
+        return {
+          content: [{
+            type: "text",
+            text: `Container created successfully with Id: ${result.Id}${result.Warnings.length > 0
+              ? `\nWarnings: ${result.Warnings.join(", ")}`
+              : ""
+              }`,
+          }],
+        };
+      }
+
+      case Tools.StartDockerContainer: {
+        await startDockerContainer(
+          typedArgs.containerId as string,
+        );
+        return {
+          content: [{
+            type: "text",
+            text:
+              `Operation successful - Container Id: ${typedArgs.containerId}, Env Id: ${typedArgs.envId}`,
+          }],
+        };
+      }
+
+      case Tools.DeleteDockerContainer: {
+        await deleteDockerContainer(
+          typedArgs.containerId as string,
+          typedArgs.force as boolean,
+        );
+        return {
+          content: [{
+            type: "text",
+            text:
+              `Operation successful - Container Id: ${typedArgs.containerId}, Env Id: ${typedArgs.envId}`,
+          }],
+        };
+      }
+
+      case Tools.GetContainerLogs: {
+        const result = await fetchContainerLogs(
+          typedArgs.containerId as string,
+          typedArgs.stdout as boolean,
+          typedArgs.stderr as boolean,
+          typedArgs.follow as boolean,
+          typedArgs.timestamps as boolean,
+          typedArgs.tail as number,
+        );
+        return {
+          content: [{
+            type: "text",
+            text: result.message,
+          }],
+        };
+      }
+
+      case Tools.UpdateContainer: {
+        await updateContainerResourceLimits(
+          typedArgs.containerId as string,
+          typedArgs.memory as number,
+          typedArgs.memorySwap as number,
+          typedArgs.restartPolicy as Record<string, unknown>,
+        );
+        return {
+          content: [{
+            type: "text",
+            text: `Operation successful - Container Id: ${typedArgs.containerId}, Env Id: ${typedArgs.envId}`,
+          }],
+        };
+      }
+
+      case Tools.DeleteUnwantedContainers: {
+        await pruneContainer();
+        return {
+          content: [{
+            type: "text",
+            text: `Operation successful - Env Id: ${typedArgs.envId}`,
+          }],
+        };
+      }
+
+      case Tools.GetImages: {
+        const images = await fetchImages();
+        return {
+          content: [{
+            type: "text",
+            text: images.map((image: {
+              Id: string;
+              RepoTags: string[];
+            }) => {
+              const name = image.RepoTags?.[0] || "untagged";
+              const registry = name.includes("/")
+                ? name.split("/")[0]
+                : "docker.io";
+              return `Name: ${name}, Registry: ${registry}, Id: ${image.Id}`;
+            }).join("\n"),
+          }],
+        };
+      }
+
+      case Tools.DeleteImageBuilderCache: {
+        await deleteImageBuildCache();
+        return {
+          content: [{
+            type: "text",
+            text: `Operation successful - Env Id: ${typedArgs.envId}`,
+          }],
+        };
+      }
+
+      case Tools.DeleteUnusedImages: {
+        const result = await deleteUnusedImages();
+        return {
+          content: [{
+            type: "text",
+            text: result.map((image: {
+              name: string;
+              description: string;
+            }) => `Name: ${image.name}, Description: ${image.description}`).join(
+              "\n",
+            ),
+          }],
+        };
+      }
+
+      case Tools.GetNetworks: {
+        const networks = await fetchNetworks();
+        return {
+          content: [{
+            type: "text",
+            text: networks.map((network: {
+              Name: string;
+              Id: string;
+              Created: string;
+              Scope: string;
+              Driver: string;
+            }) =>
+              `Name: ${network.Name}, Id: ${network.Id}, Created: ${network.Created}, Scope: ${network.Scope}, Driver: ${network.Driver}`
+            ).join("\n"),
+          }],
+        };
+      }
+
+      case Tools.GetServices: {
+        const services = await fetchServices();
+        return {
+          content: [{
+            type: "text",
+            text: services.map((service: any) => {
+              const name = service?.Spec?.Name || "N/A";
+              const image = service?.Spec?.TaskTemplate?.ContainerSpec?.Image ||
+                "N/A";
+              const ports = service?.Endpoint?.Ports?.map((port: any) =>
+                `${port.PublishedPort}->${port.TargetPort}/${port.Protocol}`
+              ).join(", ") || "None";
+
+              return `Name: ${name}, Image: ${image}, Ports: ${ports}`;
+            }).join("\n"),
+          }],
+        };
+      }
+
+      case Tools.GetServiceLogs: {
+        const result = await fetchServiceLog(
+          typedArgs.serviceId as string,
+          typedArgs.stdout as boolean,
+          typedArgs.stderr as boolean,
+          typedArgs.follow as boolean,
+          typedArgs.timestamps as boolean,
+          typedArgs.tail as number,
+        );
+
+        return {
+          content: [{
+            type: "text",
+            text: result.message,
+          }],
+        };
+      }
+
+      default: {
+        throw new Error(`Unknown tool: ${name}`);
+      }
+    }
+
+  } catch (error: any) {
+    const errorMessage = error.response?.data?.message || error.message || "Cannot process the request";
+    return {
+      content: [{
+        type: "text",
+        text: `Failed: ${errorMessage}`,
+      }],
+    };
   }
-
-  // Type assertion for args to ensure proper typing
-  const typedArgs = args as Record<string, any>;
-
-  switch (name) {
-    case TOOL.FETCH_DOCKER_CONTAINERS: {
-      const containers = await fetchDockerContainers(typedArgs.envId as string);
-      return { result: containers };
-    }
-
-    case TOOL.CREATE_DOCKER_CONTAINER: {
-      const createResult = await createDockerContainer(
-        typedArgs.envId as string,
-        typedArgs.containerName as string,
-        typedArgs.image as string,
-        typedArgs.exposedPorts as Record<string, unknown> || {},
-        typedArgs.hostConfig as Record<string, unknown> || {},
-      );
-      return { result: createResult };
-    }
-
-    case TOOL.START_DOCKER_CONTAINER: {
-      const startResult = await startDockerContainer(
-        typedArgs.envId as string,
-        typedArgs.containerId as string,
-      );
-      return { result: startResult };
-    }
-
-    case TOOL.DELETE_DOCKER_CONTAINER: {
-      const deleteResult = await deleteDockerContainer(
-        typedArgs.envId as string,
-        typedArgs.containerId as string,
-        typedArgs.force as boolean,
-      );
-      return { result: deleteResult };
-    }
-
-    case TOOL.FETCH_CONTAINER_LOGS: {
-      const logs = await fetchContainerLogs(
-        typedArgs.envId as string,
-        typedArgs.containerId as string,
-        typedArgs.stdout as boolean,
-        typedArgs.stderr as boolean,
-        typedArgs.follow as boolean,
-        typedArgs.timestamps as boolean,
-        typedArgs.tail as number,
-      );
-      return { result: logs };
-    }
-
-    case TOOL.UPDATE_CONTAINER_RESOURCE_LIMITS: {
-      const updateResult = await updateContainerResourceLimits(
-        typedArgs.envId as string,
-        typedArgs.containerId as string,
-        typedArgs.memory as number,
-        typedArgs.memorySwap as number,
-        typedArgs.restartPolicy as Record<string, unknown>,
-      );
-      return { result: updateResult };
-    }
-
-    case TOOL.DELETE_STOPPED_CONTAINERS: {
-      const deleteResult = await deleteStoppedContainers(
-        typedArgs.envId as string,
-      );
-      return { result: deleteResult };
-    }
-
-    case TOOL.FETCH_IMAGES: {
-      const images = await fetchImages(typedArgs.envId as string);
-      return { result: images };
-    }
-
-    case TOOL.DELETE_IMAGE_BUILD_CACHE: {
-      const cacheResult = await deleteImageBuildCache(
-        typedArgs.envId as string,
-      );
-      return { result: cacheResult };
-    }
-
-    case TOOL.DELETE_UNUSED_IMAGES: {
-      const unusedResult = await deleteUnusedImages(typedArgs.envId as string);
-      return { result: unusedResult };
-    }
-
-    case TOOL.FETCH_NETWORKS: {
-      const networks = await fetchNetworks(typedArgs.envId as string);
-      return { result: networks };
-    }
-
-    case TOOL.INSPECT_NETWORK: {
-      const network = await inspectNetwork(
-        typedArgs.envId as string,
-        typedArgs.networkId as string,
-      );
-      return { result: network };
-    }
-
-    case TOOL.FETCH_SERVICES: {
-      const services = await fetchServices(typedArgs.envId as string);
-      return { result: services };
-    }
-
-    case TOOL.FETCH_SERVICE_LOG: {
-      const serviceLogs = await fetchServiceLog(
-        typedArgs.envId as string,
-        typedArgs.serviceId as string,
-        typedArgs.stdout as boolean,
-        typedArgs.stderr as boolean,
-        typedArgs.follow as boolean,
-        typedArgs.timestamps as boolean,
-        typedArgs.tail as number,
-      );
-      return { result: serviceLogs };
-    }
-
-    default: {
-      throw new Error(`Unknown tool: ${name}`);
-    }
-  }
-});
+})
 
 // Start receiving messages on stdin and sending messages on stdout
 const transport = new StdioServerTransport();

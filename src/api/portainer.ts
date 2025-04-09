@@ -1,18 +1,12 @@
-import axios, { AxiosError, AxiosInstance } from "axios";
-import {
-    DockerContainer,
-    DockerImage,
-    DockerNetwork,
-    DockerService,
-} from "../types/index.ts";
+import axios, { AxiosInstance } from "axios";
+
 import { load } from "https://deno.land/std@0.220.1/dotenv/mod.ts";
 
-await load({ export: true });
+load({ export: true });
 
-const PORTAINER_BASE_URL = Deno.env.get("PORTAINER_BASE_URL") ||
-    "portainer-api";
-const PORTAINER_API_KEY = Deno.env.get("PORTAINER_API_KEY") ||
-    "poratienr-access-token";
+const PORTAINER_BASE_URL = Deno.env.get("PORTAINER_BASE_URL");
+const PORTAINER_API_KEY = Deno.env.get("PORTAINER_API_KEY");
+const PORTAINER_ENV_ID = Deno.env.get("PORTAINER_ENV_ID");
 
 const portainerClient: AxiosInstance = axios.create({
     baseURL: PORTAINER_BASE_URL,
@@ -20,53 +14,26 @@ const portainerClient: AxiosInstance = axios.create({
     timeout: 30000,
 });
 
-async function handleRequest<T>(request: Promise<{ data: T }>): Promise<T> {
-    try {
-        const response = await request;
-        return response.data;
-    } catch (error) {
-        if (axios.isAxiosError(error)) {
-            const axiosError = error as AxiosError;
-            if (axiosError.response) {
-                throw new Error(
-                    `Portainer API error: ${axiosError.response.status} - ${
-                        JSON.stringify(axiosError.response.data)
-                    }`,
-                );
-            } else if (axiosError.request) {
-                throw new Error(
-                    `No response from Portainer API: ${axiosError.message}`,
-                );
-            } else {
-                throw new Error(
-                    `Error setting up request to Portainer API: ${axiosError.message}`,
-                );
-            }
-        }
-        throw error;
-    }
-}
-
 /**
  * Fetch all Docker containers from a specified environment
  * @param envId - The ID of the environment to fetch containers from
  * @returns Array of Docker containers
  */
-async function fetchDockerContainers(
-    envId: string,
-): Promise<DockerContainer[]> {
-    return await handleRequest(
-        portainerClient.get(`/api/endpoints/${envId}/docker/containers/json`, {
+async function fetchDockerContainers() {
+    const response = await portainerClient.get(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/json`,
+        {
             params: {
                 all: true,
             },
-        }),
+        },
     );
+
+    return response.data;
 }
 
 /**
  * Create a new Docker container in a specified environment
- * @param envId - The ID of the environment to create the container in
  * @param containerName - The name of the container to create
  * @param image - The Docker image to use for the container
  * @param exposedPorts - Ports to expose from the container
@@ -74,69 +41,58 @@ async function fetchDockerContainers(
  * @returns Container creation response
  */
 async function createDockerContainer(
-    envId: string,
     containerName: string,
     image: string,
     exposedPorts: Record<string, unknown>,
     hostConfig: Record<string, unknown>,
-): Promise<{ Id: string; Warnings: string[] }> {
-    return await handleRequest(
-        portainerClient.post(
-            `/api/endpoints/${envId}/docker/containers/create`,
-            {
-                name: containerName,
-                Image: image,
-                ExposedPorts: exposedPorts,
-                HostConfig: hostConfig,
-            },
-        ),
+) {
+    const response = await portainerClient.post(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/create`,
+        {
+            name: containerName,
+            Image: image,
+            ExposedPorts: exposedPorts,
+            HostConfig: hostConfig,
+        },
     );
+    return response.data;
 }
 
 /**
  * Start a Docker container in a specified environment
- * @param envId - The ID of the environment containing the container
  * @param containerId - The ID of the container to start
  * @returns Empty response on success
  */
 async function startDockerContainer(
-    envId: string,
     containerId: string,
-): Promise<void> {
-    return await handleRequest(
-        portainerClient.post(
-            `/api/endpoints/${envId}/docker/containers/${containerId}/start`,
-        ),
+) {
+    await portainerClient.post(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/${containerId}/start`,
     );
 }
 
 /**
  * Delete a Docker container from a specified environment
- * @param envId - The ID of the environment containing the container
  * @param containerId - The ID of the container to delete
  * @param force - Whether to force the deletion of the container
  * @returns Empty response on success
  */
 async function deleteDockerContainer(
-    envId: string,
     containerId: string,
     force: boolean = false,
-): Promise<void> {
-    return await handleRequest(
-        portainerClient.delete(
-            `/api/endpoints/${envId}/docker/containers/${containerId}`,
-            {
-                params: {
-                    force: force,
-                },
+) {
+    await portainerClient.delete(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/${containerId}`,
+        {
+            params: {
+                force: force,
             },
-        ),
+        },
     );
 }
 
 /**
  * Fetch logs from a Docker container
- * @param envId - The ID of the environment containing the container
  * @param containerId - The ID of the container to fetch logs from
  * @param stdout - Whether to include stdout logs
  * @param stderr - Whether to include stderr logs
@@ -146,33 +102,30 @@ async function deleteDockerContainer(
  * @returns Container logs
  */
 async function fetchContainerLogs(
-    envId: string,
     containerId: string,
     stdout: boolean = true,
     stderr: boolean = true,
     follow: boolean = false,
     timestamps: boolean = false,
     tail: number = 10,
-): Promise<string> {
-    return await handleRequest(
-        portainerClient.get(
-            `/api/endpoints/${envId}/docker/containers/${containerId}/logs`,
-            {
-                params: {
-                    stdout: stdout,
-                    stderr: stderr,
-                    follow: follow,
-                    timestamps: timestamps,
-                    tail: tail,
-                },
+) {
+    const response = await portainerClient.get(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/${containerId}/logs`,
+        {
+            params: {
+                stdout: stdout,
+                stderr: stderr,
+                follow: follow,
+                timestamps: timestamps,
+                tail: tail,
             },
-        ),
+        },
     );
+    return response.data;
 }
 
 /**
  * Update resource limits for a Docker container
- * @param envId - The ID of the environment containing the container
  * @param containerId - The ID of the container to update
  * @param memory - Memory limit in bytes
  * @param memorySwap - Memory swap limit in bytes
@@ -180,21 +133,18 @@ async function fetchContainerLogs(
  * @returns Empty response on success
  */
 async function updateContainerResourceLimits(
-    envId: string,
     containerId: string,
     memory: number,
     memorySwap: number,
     restartPolicy: Record<string, unknown>,
-): Promise<void> {
-    return await handleRequest(
-        portainerClient.post(
-            `/api/endpoints/${envId}/docker/containers/${containerId}/update`,
-            {
-                Memory: memory,
-                MemorySwap: memorySwap,
-                RestartPolicy: restartPolicy,
-            },
-        ),
+) {
+    await portainerClient.post(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/${containerId}/update`,
+        {
+            Memory: memory,
+            MemorySwap: memorySwap,
+            RestartPolicy: restartPolicy,
+        },
     );
 }
 
@@ -203,30 +153,27 @@ async function updateContainerResourceLimits(
  * @param envId - The ID of the environment to clean up
  * @returns Prune response with deleted container IDs
  */
-async function deleteStoppedContainers(
-    envId: string,
-): Promise<{ ContainersDeleted: string[]; SpaceReclaimed: number }> {
-    return await handleRequest(
-        portainerClient.delete(
-            `/api/endpoints/${envId}/docker/containers/prune`,
-            {
-                params: {
-                    all: true,
-                },
+async function pruneContainer() {
+    const response = await portainerClient.delete(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/containers/prune`,
+        {
+            params: {
+                all: true,
             },
-        ),
+        },
     );
+    return response.data;
 }
 
 /**
  * Fetch all Docker images from a specified environment
- * @param envId - The ID of the environment to fetch images from
  * @returns Array of Docker images
  */
-async function fetchImages(envId: string): Promise<DockerImage[]> {
-    return await handleRequest(
-        portainerClient.get(`/api/endpoints/${envId}/docker/images/json`),
+async function fetchImages() {
+    const response = await portainerClient.get(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/images/json`,
     );
+    return response.data;
 }
 
 /**
@@ -234,69 +181,48 @@ async function fetchImages(envId: string): Promise<DockerImage[]> {
  * @param envId - The ID of the environment to clean up
  * @returns Prune response with deleted image IDs
  */
-async function deleteImageBuildCache(
-    envId: string,
-): Promise<{ ImagesDeleted: string[]; SpaceReclaimed: number }> {
-    return await handleRequest(
-        portainerClient.delete(`/api/endpoints/${envId}/docker/images/prune`),
+async function deleteImageBuildCache() {
+    const response = await portainerClient.delete(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/images/prune`,
     );
+    return response.data;
 }
 
 /**
  * Delete unused Docker images
- * @param envId - The ID of the environment to clean up
  * @returns Prune response with deleted image IDs
  */
-async function deleteUnusedImages(
-    envId: string,
-): Promise<{ ImagesDeleted: string[]; SpaceReclaimed: number }> {
-    return await handleRequest(
-        portainerClient.delete(`/api/endpoints/${envId}/docker/images/prune`),
+async function deleteUnusedImages() {
+    const response = await portainerClient.delete(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/images/prune`,
     );
+    return response.data;
 }
 
 /**
  * Fetch all Docker networks from a specified environment
- * @param envId - The ID of the environment to fetch networks from
  * @returns Array of Docker networks
  */
-async function fetchNetworks(envId: string): Promise<DockerNetwork[]> {
-    return await handleRequest(
-        portainerClient.get(`/api/endpoints/${envId}/docker/networks`),
+async function fetchNetworks() {
+    const response = await portainerClient.get(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/networks`,
     );
-}
-
-/**
- * Get detailed information about a specific Docker network
- * @param envId - The ID of the environment containing the network
- * @param networkId - The ID of the network to inspect
- * @returns Network details
- */
-async function inspectNetwork(
-    envId: string,
-    networkId: string,
-): Promise<DockerNetwork> {
-    return await handleRequest(
-        portainerClient.get(
-            `/api/endpoints/${envId}/docker/networks/${networkId}`,
-        ),
-    );
+    return response.data;
 }
 
 /**
  * Fetch all Docker services from a specified environment
- * @param envId - The ID of the environment to fetch services from
  * @returns Array of Docker services
  */
-async function fetchServices(envId: string): Promise<DockerService[]> {
-    return await handleRequest(
-        portainerClient.get(`/api/endpoints/${envId}/docker/services`),
+async function fetchServices() {
+    const response = await portainerClient.get(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/services`,
     );
+    return response.data;
 }
 
 /**
  * Fetch logs from a Docker service
- * @param envId - The ID of the environment containing the service
  * @param serviceId - The ID of the service to fetch logs from
  * @param stdout - Whether to include stdout logs
  * @param stderr - Whether to include stderr logs
@@ -306,35 +232,32 @@ async function fetchServices(envId: string): Promise<DockerService[]> {
  * @returns Service logs
  */
 async function fetchServiceLog(
-    envId: string,
     serviceId: string,
     stdout: boolean = true,
     stderr: boolean = true,
     follow: boolean = false,
     timestamps: boolean = false,
     tail: number = 10,
-): Promise<string> {
-    return await handleRequest(
-        portainerClient.get(
-            `/api/endpoints/${envId}/docker/services/${serviceId}/logs`,
-            {
-                params: {
-                    stdout: stdout,
-                    stderr: stderr,
-                    follow: follow,
-                    timestamps: timestamps,
-                    tail: tail,
-                },
+) {
+    const response = await portainerClient.get(
+        `/api/endpoints/${PORTAINER_ENV_ID}/docker/services/${serviceId}/logs`,
+        {
+            params: {
+                stdout: stdout,
+                stderr: stderr,
+                follow: follow,
+                timestamps: timestamps,
+                tail: tail,
             },
-        ),
+        },
     );
+    return response.data;
 }
 
 export {
     createDockerContainer,
     deleteDockerContainer,
     deleteImageBuildCache,
-    deleteStoppedContainers,
     deleteUnusedImages,
     fetchContainerLogs,
     fetchDockerContainers,
@@ -342,7 +265,7 @@ export {
     fetchNetworks,
     fetchServiceLog,
     fetchServices,
-    inspectNetwork,
+    pruneContainer,
     startDockerContainer,
     updateContainerResourceLimits,
 };
