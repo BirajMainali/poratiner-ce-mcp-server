@@ -278,7 +278,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           content: [{
             type: "text",
             text: result.map((container: any) => {
-              return `ContainerId: ${container.Id}, Name: ${container.Names?.[0] || "unknown"}, Ports: ${container.Ports?.map(p => `${p.PublicPort}:${p.PrivatePort}/${p.Type}`).join(", ") || "none"}, State: ${container.State}, Status: ${container.Status}`;
+              return `ContainerId: ${container.Id}, Name: ${container.Names?.[0] || "unknown"}, Ports: ${container.Ports?.map((p: {
+                PublicPort: number;
+                PrivatePort: number;
+                Type: string;
+              }) => `${p.PublicPort}:${p.PrivatePort}/${p.Type}`).join(", ") || "none"}, State: ${container.State}, Status: ${container.Status}`;
             }).join("\n"),
           }],
         };
