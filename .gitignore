@@ -5,6 +5,9 @@
 .env.test
 .env.production
 
+# Build output
+src.exe
+
 # Deno
 .deno/
 deno.lock
