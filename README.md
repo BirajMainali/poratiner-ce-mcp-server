@@ -46,6 +46,7 @@ cd portainer-ce-mcp
 The server requires the following environment variables:
 - `PORTAINER_URL`: The URL of your Portainer instance
 - `PORTAINER_API_KEY`: Your Portainer API key
+- `PORTAINER_ENV_ID`: Your Poratiner Environment Id
 
 ## API Tools
 
@@ -79,6 +80,11 @@ The server provides the following tools for AI assistants:
 ### Building
 ```bash
 deno compile --allow-env --allow-read --allow-net --env-file=.env  src/main.ts
+```
+
+### Inspect MCP Server
+```bash
+npx @modelcontextprotocol/inspector deno run --allow-env --allow-read --allow-net --env-file=.env  src/main.ts
 ```
 
 ### MCP Config
