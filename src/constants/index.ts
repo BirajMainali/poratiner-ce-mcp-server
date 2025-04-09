@@ -1,0 +1,16 @@
+export const TOOL = {
+    FETCH_DOCKER_CONTAINERS: "fetch_docker_containers",
+    CREATE_DOCKER_CONTAINER: "create_docker_container",
+    START_DOCKER_CONTAINER: "start_docker_container",
+    DELETE_DOCKER_CONTAINER: "delete_docker_container",
+    FETCH_CONTAINER_LOGS: "fetch_container_logs",
+    UPDATE_CONTAINER_RESOURCE_LIMITS: "update_container_resource_limits",
+    DELETE_STOPPED_CONTAINERS: "delete_stopped_containers",
+    FETCH_IMAGES: "fetch_images",
+    DELETE_IMAGE_BUILD_CACHE: "delete_image_build_cache",
+    DELETE_UNUSED_IMAGES: "delete_unused_images",
+    FETCH_NETWORKS: "fetch_networks",
+    INSPECT_NETWORK: "inspect_network",
+    FETCH_SERVICES: "fetch_services",
+    FETCH_SERVICE_LOG: "fetch_service_log",
+};
