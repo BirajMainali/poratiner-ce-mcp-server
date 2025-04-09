@@ -30,7 +30,7 @@ portainer-ce-mcp/
 
 ## Prerequisites
 
-- Node.js (v14 or higher)
+- Deno
 - Portainer instance with API access
 - Docker installed and running
 

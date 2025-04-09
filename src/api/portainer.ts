@@ -9,8 +9,10 @@ import { load } from "https://deno.land/std@0.220.1/dotenv/mod.ts";
 
 await load({ export: true });
 
-const PORTAINER_BASE_URL = Deno.env.get("PORTAINER_BASE_URL") || "portainer-api";
-const PORTAINER_API_KEY = Deno.env.get("PORTAINER_API_KEY") || "poratienr-access-token";
+const PORTAINER_BASE_URL = Deno.env.get("PORTAINER_BASE_URL") ||
+    "portainer-api";
+const PORTAINER_API_KEY = Deno.env.get("PORTAINER_API_KEY") ||
+    "poratienr-access-token";
 
 const portainerClient: AxiosInstance = axios.create({
     baseURL: PORTAINER_BASE_URL,
@@ -79,12 +81,15 @@ async function createDockerContainer(
     hostConfig: Record<string, unknown>,
 ): Promise<{ Id: string; Warnings: string[] }> {
     return await handleRequest(
-        portainerClient.post(`/api/endpoints/${envId}/docker/containers/create`, {
-            name: containerName,
-            Image: image,
-            ExposedPorts: exposedPorts,
-            HostConfig: hostConfig,
-        }),
+        portainerClient.post(
+            `/api/endpoints/${envId}/docker/containers/create`,
+            {
+                name: containerName,
+                Image: image,
+                ExposedPorts: exposedPorts,
+                HostConfig: hostConfig,
+            },
+        ),
     );
 }
 
@@ -149,7 +154,7 @@ async function fetchContainerLogs(
     timestamps: boolean = false,
     tail: number = 10,
 ): Promise<string> {
-    return handleRequest(
+    return await handleRequest(
         portainerClient.get(
             `/api/endpoints/${envId}/docker/containers/${containerId}/logs`,
             {
@@ -202,11 +207,14 @@ async function deleteStoppedContainers(
     envId: string,
 ): Promise<{ ContainersDeleted: string[]; SpaceReclaimed: number }> {
     return await handleRequest(
-        portainerClient.delete(`/api/endpoints/${envId}/docker/containers/prune`, {
-            params: {
-                all: true,
+        portainerClient.delete(
+            `/api/endpoints/${envId}/docker/containers/prune`,
+            {
+                params: {
+                    all: true,
+                },
             },
-        }),
+        ),
     );
 }
 
@@ -269,7 +277,9 @@ async function inspectNetwork(
     networkId: string,
 ): Promise<DockerNetwork> {
     return await handleRequest(
-        portainerClient.get(`/api/endpoints/${envId}/docker/networks/${networkId}`),
+        portainerClient.get(
+            `/api/endpoints/${envId}/docker/networks/${networkId}`,
+        ),
     );
 }
 
@@ -336,5 +346,3 @@ export {
     startDockerContainer,
     updateContainerResourceLimits,
 };
-
-export type { DockerContainer, DockerImage, DockerNetwork, DockerService };
