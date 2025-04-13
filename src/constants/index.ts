@@ -1,9 +1,9 @@
 export const Tools = {
-    GetDockerContainers: "fetch_docker_containers",
+    DockerContainers: "fetch_docker_containers",
     CreateDockerContainer: "create_docker_container",
     StartDockerContainer: "start_docker_container",
     DeleteDockerContainer: "delete_docker_container",
-    GetContainerLogs: "fetch_container_logs",
+    ContainerLogs: "fetch_container_logs",
     UpdateContainer: "update_container_resource_limits",
     DeleteUnwantedContainers: "delete_stopped_containers",
     GetImages: "fetch_docker_images",
@@ -11,5 +11,7 @@ export const Tools = {
     DeleteUnusedImages: "delete_unused_images",
     GetNetworks: "fetch_docker_networks",
     GetServices: "fetch_docker_services",
-    GetServiceLogs: "fetch_service_logs",
+    ServiceLogs: "fetch_service_logs",
+    InspectService: "inspect_service",
+    UpdateService: "update_docker_service",
 };
