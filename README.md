@@ -1,3 +1,5 @@
+[![MseeP.ai Security Assessment Badge](https://mseep.net/pr/birajmainali-poratiner-ce-mcp-server-badge.png)](https://mseep.ai/app/birajmainali-poratiner-ce-mcp-server)
+
 # Portainer MCP Server
 
 A Model Context Protocol (MCP) server implementation for Portainer, enabling AI assistants to interact with Docker containers and services through Portainer's API.
